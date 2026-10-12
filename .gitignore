@@ -1,0 +1,38 @@
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+LOGIN.txt
+.secrets.json
+credentials*
+*.key
+*.pem
+# Runtime state and media
+appdata/
+data/
+downloads/
+media/
+*.db
+*.db-*
+*.sqlite*
+*.log
+# Local/editor files
+__pycache__/
+.DS_Store
+Thumbs.db
+.vscode/
+image-manifest.local.txt
+
+# Media accidentally copied into the source folder
+*.mp4
+*.mkv
+*.avi
+*.mov
+*.torrent
+torrent-cleanup-state.json
+*.lock
+*.tmp
+
+# Private update snapshots
+backups/
+homestream-backups/

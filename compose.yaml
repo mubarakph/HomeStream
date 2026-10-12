@@ -1,0 +1,95 @@
+name: homestream
+
+x-arr: &arr
+  restart: unless-stopped
+  environment:
+    PUID: ${PUID:-1000}
+    PGID: ${PGID:-1000}
+    TZ: ${TZ:-Etc/UTC}
+  logging: &logs
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+services:
+  jellyfin:
+    image: jellyfin/jellyfin:latest
+    user: "${PUID:-1000}:${PGID:-1000}"
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ:-Etc/UTC}
+    ports:
+      - "${SERVER_IP:?Set SERVER_IP in .env}:8096:8096"
+    volumes:
+      - "${APPDATA_ROOT:?Set APPDATA_ROOT in .env}/jellyfin:/config"
+      - "${APPDATA_ROOT}/jellyfin-cache:/cache"
+      - "${DATA_ROOT:?Set DATA_ROOT in .env}/media:/media:ro"
+    logging: *logs
+
+  seerr:
+    image: ghcr.io/seerr-team/seerr:latest
+    init: true
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ:-Etc/UTC}
+      LOG_LEVEL: info
+    ports:
+      - "${SERVER_IP}:5055:5055"
+    volumes:
+      - "${APPDATA_ROOT}/seerr:/app/config"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    healthcheck:
+      test: [CMD-SHELL, "wget --no-verbose --tries=1 --spider http://localhost:5055/api/v1/settings/public || exit 1"]
+      start_period: 30s
+      interval: 30s
+      timeout: 3s
+      retries: 5
+    logging: *logs
+
+  radarr:
+    <<: *arr
+    image: lscr.io/linuxserver/radarr:latest
+    ports: ["${SERVER_IP}:7878:7878"]
+    volumes:
+      - "${APPDATA_ROOT}/radarr:/config"
+      - "${DATA_ROOT}:/data"
+
+  sonarr:
+    <<: *arr
+    image: lscr.io/linuxserver/sonarr:latest
+    ports: ["${SERVER_IP}:8989:8989"]
+    volumes:
+      - "${APPDATA_ROOT}/sonarr:/config"
+      - "${DATA_ROOT}:/data"
+
+  prowlarr:
+    <<: *arr
+    image: lscr.io/linuxserver/prowlarr:latest
+    ports: ["${SERVER_IP}:9696:9696"]
+    volumes: ["${APPDATA_ROOT}/prowlarr:/config"]
+
+  qbittorrent:
+    <<: *arr
+    image: lscr.io/linuxserver/qbittorrent:latest
+    environment:
+      PUID: ${PUID:-1000}
+      PGID: ${PGID:-1000}
+      TZ: ${TZ:-Etc/UTC}
+      WEBUI_PORT: 8080
+    ports: ["${SERVER_IP}:8080:8080"]
+    volumes:
+      - "${APPDATA_ROOT}/qbittorrent:/config"
+      - "${DATA_ROOT}:/data"
+
+  flaresolverr:
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    restart: unless-stopped
+    environment:
+      LOG_LEVEL: info
+      TZ: ${TZ:-Etc/UTC}
+    mem_limit: 1g
+    logging: *logs
+    # Internal only: Prowlarr connects to http://flaresolverr:8191.
