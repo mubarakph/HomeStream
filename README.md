@@ -457,3 +457,29 @@ This prevents a stalled torrent from consuming the only available download slot.
 Each torrent still needs reachable peers, and Radarr/Sonarr must first find an
 acceptable release. Downloads share bandwidth and disk space. The original
 server now has queueing disabled; new installations choose this in the Web UI.
+
+### Cancel downloads from Seerr
+
+Optional `scripts/seerr_cancel_cleanup.py` watches requests it has previously
+observed. Removed or declined requests cancel exactly matched qBittorrent
+downloads and unmonitor the matching Radarr movie or Sonarr series. Failed
+requests are not cancellations. Another current request for the same title
+protects it. Imported Jellyfin library files stay in place.
+
+This helper currently expects the existing stack layout: appdata/seerr/settings.json,
+appdata/radarr/config.xml, appdata/sonarr/config.xml and a private .secrets.json
+with qBittorrent username/password (or admin_user/admin_password). It supports
+the default non-4K services only. It does not retrospectively cancel requests
+deleted before its first run, or torrents without a reliable download-ID match.
+
+Run once without --apply to establish its baseline, then schedule every minute:
+
+```bash
+python3 scripts/seerr_cancel_cleanup.py --stack-root /opt/media-stack --download-root /srv/media-data/downloads --server http://192.168.18.86
+# Add --apply only to enable cancellation and download-file deletion.
+```
+
+A cancellation must persist for at least 60 seconds. qBittorrent source files
+must remain inside /data/downloads; shared torrent file paths are protected.
+Keep the cancellation state private and persistent. The regular installer does
+not enable this optional destructive policy automatically.
