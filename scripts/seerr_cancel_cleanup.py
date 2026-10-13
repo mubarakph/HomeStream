@@ -41,6 +41,7 @@ def main():
     p.add_argument("--download-root", type=Path, required=True)
     p.add_argument("--server", required=True)
     p.add_argument("--apply", action="store_true")
+    p.add_argument("--delete-library", action="store_true", help="Also delete imported files for cancelled requests")
     a = p.parse_args()
     root = a.stack_root.resolve(strict=True)
     downloads = a.download_root.resolve(strict=True)
@@ -127,6 +128,14 @@ def main():
         item["hashes"] = sorted(set(item["hashes"]) | hashes)
         if now - item["since"] < 60:
             continue
+        # Confirm cancellation again before unmonitoring or deleting library files.
+        try:
+            live = seerr.call("/api/v1/request/" + key)
+            if live["status"] != 3:
+                continue
+        except urllib.error.HTTPError as error:
+            if error.code != 404:
+                raise
         if a.apply:
             entity["monitored"] = False
             if kind == "tv":
@@ -134,6 +143,18 @@ def main():
                     season["monitored"] = False
             clients[kind].call("/api/v3/" + ("movie" if kind == "movie" else "series")
                               + "/" + str(entity_id), entity, "PUT")
+        if a.apply and a.delete_library:
+            if kind == "movie":
+                file_id = entity.get("movieFileId")
+                if file_id:
+                    clients[kind].call("/api/v3/moviefile/" + str(file_id), method="DELETE")
+            else:
+                # Restrict imported TV deletion to seasons in the cancelled request.
+                seasons = {season["seasonNumber"] for season in r.get("seasons", [])}
+                files = clients[kind].call("/api/v3/episodefile?seriesId=" + str(entity_id))
+                for file in files:
+                    if file.get("seasonNumber") in seasons:
+                        clients[kind].call("/api/v3/episodefile/" + str(file["id"]), method="DELETE")
         for t in torrents:
             matches = aliases(t) & set(item["hashes"])
             owners = set().union(*(ownership.get(h, set()) for h in aliases(t)))

@@ -483,3 +483,5 @@ A cancellation must persist for at least 60 seconds. qBittorrent source files
 must remain inside /data/downloads; shared torrent file paths are protected.
 Keep the cancellation state private and persistent. The regular installer does
 not enable this optional destructive policy automatically.
+
+With explicit approval, add --delete-library to also delete imported movie files and episode files from the cancelled request's seasons through Radarr/Sonarr. Jellyfin removes missing videos on its next library scan. Another current request for the same title protects its files.
