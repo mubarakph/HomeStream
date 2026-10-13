@@ -316,6 +316,30 @@ application data contains credentials and API keys.
 | Installer reports ownership mismatch | Use a new dedicated folder or review existing permissions |
 | Installer reports occupied ports | Resolve the conflicting service or carefully change Compose mappings |
 
+### Download complete but missing from Jellyfin
+
+A torrent at 100% has finished downloading. Radarr/Sonarr must import it into
+its library folder before Jellyfin can find it. Seerr updates availability after
+that import and its media-server scan.
+
+1. Open Radarr/Sonarr **Activity → Queue** and inspect the warning beside the
+   completed download. A persistent warning needs attention; waiting alone will
+   not resolve an import error.
+2. For **Not enough free space**, check the disk holding both downloads and media.
+   Free space using the configured cleanup policy, remove unwanted requests, or
+   expand storage. Existing hardlinks save space, but the importer can still enforce
+   its configured minimum-free-space threshold. Keep storage protection enabled.
+3. Confirm the torrent category, download-client path mapping, library root and
+   file permissions. Enable completed download handling and hardlinks when both
+   folders are on the same filesystem.
+4. Once Radarr/Sonarr shows the title as downloaded, run a Jellyfin library scan
+   if it is still missing. Then run Seerr's Jellyfin scan from its scheduled jobs
+   if availability remains stale.
+
+Removing a request with the optional cancellation service enabled deliberately
+removes its matching torrent. With `--delete-library`, imported files are removed
+as well; request the title again if you want to download it again.
+
 Docker published ports can bypass UFW rules. Binding to a LAN address is not a
 complete firewall policy. Review Docker-aware firewall rules before exposing
 services to other networks. Remote access is outside this installer's scope.
@@ -342,7 +366,7 @@ If credentials were committed previously, ignoring them does not remove them
 from Git history; rotate the credentials and clean the history before publishing.
 
 Choose a license before distributing the installer; the included applications
-retain their own licenses. No repository has been published automatically.
+retain their own licenses.
 
 ## Validation and references
 
